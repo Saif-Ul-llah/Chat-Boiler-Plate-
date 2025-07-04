@@ -1,0 +1,51 @@
+enum ChatInitiationType {
+    DIRECT // Direct message from user profile
+    LISTING // Message initiated from a product or service listing
+
+    @@schema("chat")
+}
+
+model Chat {
+    id           String             @id @default(uuid())
+    participants ChatParticipant[] // Join table between chat and users
+    type         ChatInitiationType
+    listingId    String? // Only set if type is LISTING
+    listing      Listings?          @relation(fields: [listingId], references: [id], onDelete: Cascade)
+    messages     Message[]
+    createdAt    DateTime           @default(now())
+    updatedAt    DateTime           @updatedAt
+
+    @@schema("chat")
+}
+
+model ChatParticipant {
+    id       String   @id @default(uuid())
+    chatId   String
+    userId   String
+    chat     Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+    user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    joinedAt DateTime @default(now())
+
+    @@schema("chat")
+}
+
+model Message {
+    id        String        @id @default(uuid())
+    chatId    String
+    senderId  String
+    content   String
+    status    MessageStatus @default(SENT)
+    chat      Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+    sender    User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+    createdAt DateTime      @default(now())
+
+    @@schema("chat")
+}
+
+enum MessageStatus {
+    SENT
+    DELIVERED
+    READ
+
+    @@schema("chat")
+}
