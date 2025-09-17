@@ -1151,7 +1151,9 @@
             <div class="user-avatar">A</div>
             <div>
               <div style="font-weight: 600; font-size: 14px">Admin User</div>
-              <div style="font-size: 11px; color: #666">973b1ac6-a6df-4989-9cf0-adb5dd1452bd</div>
+              <div style="font-size: 11px; color: #666">
+                973b1ac6-a6df-4989-9cf0-adb5dd1452bd
+              </div>
             </div>
           </div>
           <div class="connection-status">
@@ -1305,7 +1307,7 @@
       // Configuration
       const SOCKET_URL = "http://localhost:8000";
       const AUTH_TOKEN =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiOTczYjFhYzYtYTZkZi00OTg5LTljZjAtYWRiNWRkMTQ1MmJkIn0sImlhdCI6MTc1MDQ4NzQ0OSwiZXhwIjoxNzUzMDc5NDQ5fQ.jrZQJdLMUToZxr7LBDRjZ1loAEH119GTeQyevD_tB4Q";
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiOTczYjFhYzYtYTZkZi00OTg5LTljZjAtYWRiNWRkMTQ1MmJkIn0sImlhdCI6MTc1NDU2NDU3NiwiZXhwIjoxNzU3MTU2NTc2fQ.sZXjvh345IptcwOxj5dyw1m-EmaGGhY6IPUpTA5NSo8";
 
       // Initialize Socket
       const socket = io(SOCKET_URL, {
@@ -1549,9 +1551,14 @@
       }
 
       function getUserRooms() {
-        socket.emit("get_user_rooms");
-      }
+        const chatType = document.getElementById("chatType").value;
 
+        socket.emit("get_user_rooms", {
+          page: 1,
+          pageSize: 20,
+          type: chatType,
+        });
+      }
       function handleRoomJoined(roomData) {
         currentRoomId = roomData.id;
         addRoomToList(roomData);
@@ -1567,39 +1574,45 @@
         rooms.clear();
         const roomsList = document.getElementById("roomsList");
 
+        // If no rooms data or it's an empty array, show empty state
         if (!roomsData || roomsData.length === 0) {
           roomsList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-comments"></i>
-                <p>No rooms yet</p>
-                <small>Create a room to start chatting</small>
-            </div>
-        `;
+      <div class="empty-state">
+          <i class="fas fa-comments"></i>
+          <p>No rooms yet</p>
+          <small>Create a room to start chatting</small>
+      </div>
+    `;
           document.getElementById("roomCount").textContent = "0";
           return;
         }
 
-        roomsList.innerHTML = "";
+        roomsList.innerHTML = ""; // Clear any existing content
 
         // Sort rooms by last activity
         const sortedRooms = roomsData.sort((a, b) => {
-          const aTime = a.lastActivityAt || a.updatedAt;
-          const bTime = b.lastActivityAt || b.updatedAt;
+          const aTime =
+            a.lastActivityAt || a.updatedAt || "1970-01-01T00:00:00Z";
+          const bTime =
+            b.lastActivityAt || b.updatedAt || "1970-01-01T00:00:00Z";
           return new Date(bTime) - new Date(aTime);
         });
 
+        // Add rooms to the list
         sortedRooms.forEach((room) => {
           addRoomToList(room);
         });
 
-        document.getElementById("roomCount").textContent = roomsData.length;
+        // Update room count
+        document.getElementById("roomCount").textContent = rooms.size;
       }
 
       function addRoomToList(roomData) {
+        
         const roomId = roomData.roomId;
         const roomType = roomData.type?.toUpperCase() || "DIRECT";
 
-        // Convert new structure for compatibility
+        // Convert the new structure for compatibility
         const convertedRoom = {
           id: roomId,
           type: roomType,
@@ -1619,10 +1632,10 @@
           },
         };
 
-        rooms.set(roomId, convertedRoom);
+        rooms.set(roomId, convertedRoom); // Add to the rooms map
         const roomsList = document.getElementById("roomsList");
 
-        // Remove empty state if exists
+        // Remove the empty state if it exists
         const emptyState = roomsList.querySelector(".empty-state");
         if (emptyState) emptyState.remove();
 
@@ -1632,8 +1645,8 @@
           roomElement = document.createElement("div");
           roomElement.className = "room-item";
           roomElement.id = `room-${roomId}`;
-          roomElement.onclick = () => selectRoom(roomId);
-          roomsList.insertBefore(roomElement, roomsList.firstChild);
+          roomElement.onclick = () => selectRoom(roomId); // Call selectRoom when clicked
+          roomsList.insertBefore(roomElement, roomsList.firstChild); // Add the room to the list
         }
 
         // Add online status indicator based on hasActivity
@@ -1642,46 +1655,51 @@
           : "";
 
         roomElement.innerHTML = `
-        <div class="room-info">
-            <div class="room-avatar">
-                ${
-                  roomData.avatar
-                    ? `<img src="${roomData.avatar}" alt="${roomData.title}">`
-                    : `<div class="avatar-placeholder">${roomData.title
-                        .charAt(0)
-                        .toUpperCase()}</div>`
-                }
-                ${onlineIndicator}
-            </div>
-            <div class="room-details">
-                <div class="room-header">
-                    <h4>${roomData.title}</h4>
-                    <div class="room-meta">
-                        <span class="timestamp">${roomData.timestamp}</span>
-                        ${
-                          roomData.unreadCount > 0
-                            ? `<div class="unread-badge">${roomData.unreadCount}</div>`
-                            : ""
-                        }
-                    </div>
-                </div>
-                <div class="room-subtitle">
-                    <span class="${
-                      roomData.subtitle.startsWith("You:") ? "own-message" : ""
-                    }">${roomData.subtitle}</span>
-                    ${
-                      roomData.hasUnreadMessages
-                        ? '<i class="fas fa-circle unread-dot"></i>'
-                        : ""
-                    }
-                </div>
-                <div class="room-type">${roomType.toLowerCase()} • ${
+    <div class="room-info">
+      <div class="room-avatar">
+        ${
+          roomData.participant[0].avatar
+            ? `<img src="${roomData.participant[0].avatar}" alt="${roomData.participant[0].name || "Room"}">`
+            : `<div class="avatar-placeholder">${(roomData.participant[0].name || "Unknown")
+                .charAt(0)
+                .toUpperCase()}</div>`
+        }
+        ${onlineIndicator}
+      </div>
+      <div class="room-details">
+        <div class="room-header">
+          <h4>${roomData.participant[0].name || "Untitled Room"}</h4>
+          <div class="room-meta">
+            <span class="timestamp">${
+              roomData.timestamp || "No timestamp"
+            }</span>
+            ${
+              roomData.unreadCount > 0
+                ? `<div class="unread-badge">${roomData.unreadCount}</div>`
+                : ""
+            }
+          </div>
+        </div>
+        <div class="room-subtitle">
+          <span class="${
+            roomData.subtitle?.startsWith("You:") ? "own-message" : ""
+          }">
+            ${roomData.subtitle || "No messages yet"}
+          </span>
+          ${
+            roomData.hasUnreadMessages
+              ? '<i class="fas fa-circle unread-dot"></i>'
+              : ""
+          }
+        </div>
+        <div class="room-type">${roomType.toLowerCase()} • ${
           roomData.participant?.length || 0
         } members</div>
-            </div>
-        </div>
-    `;
+      </div>
+    </div>
+  `;
 
+        // Update room count
         document.getElementById("roomCount").textContent = rooms.size;
       }
 
@@ -1853,9 +1871,11 @@
       }
 
       function displayMessage(messageData) {
+        // console.log("messageData", messageData);
+        
         const container = document.getElementById("messagesContainer");
         const isOwnMessage = messageData.sender.id === currentUser;
-// console.log(messageData.senderId,isOwnMessage,messageData,"isOwnMessage");
+        // console.log(messageData.senderId,isOwnMessage,messageData,"isOwnMessage");
 
         // Remove existing message if updating
         const existingMessage = document.getElementById(
@@ -1871,7 +1891,7 @@
 
         const senderName = isOwnMessage
           ? "You"
-          : messageData.sender?.fullName || "Unknown";
+          : messageData.sender?.profile[0]?.name || "Unknown";
         const senderInitial = senderName.charAt(0).toUpperCase();
 
         messageElement.innerHTML = `
@@ -2000,7 +2020,8 @@
         if (data.roomId !== currentRoomId) return;
 
         // Handle nested messages structure
-        const messagesData = data.messages?.messages.reverse() || data.messages.reverse() || [];
+        const messagesData =
+          data.messages?.messages.reverse() || data.messages.reverse() || [];
 
         // Store messages
         messages.set(data.roomId, messagesData);
